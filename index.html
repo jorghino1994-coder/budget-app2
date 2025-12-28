@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Budget App</title>
+  <style>
+    :root { --bg:#0b1020; --card:#111a33; --muted:#9fb0ff; --text:#e9eeff; --danger:#ff5b6e; --ok:#3ddc97; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 10% 10%, #18265a 0%, var(--bg) 55%);
+      color: var(--text);
+    }
+    header {
+      padding: 18px 16px;
+      position: sticky; top: 0;
+      backdrop-filter: blur(10px);
+      background: rgba(11,16,32,.65);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      z-index: 10;
+    }
+    h1 { margin: 0; font-size: 18px; letter-spacing: .2px; }
+    main { padding: 16px; max-width: 1000px; margin: 0 auto; }
+    .grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+    @media (min-width: 860px) { .grid { grid-template-columns: 420px 1fr; align-items: start; } }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .row > * { flex: 1; min-width: 120px; }
+    label { display:block; font-size: 12px; color: rgba(233,238,255,.78); margin-bottom: 6px; }
+    input, select, button, textarea {
+      width: 100%;
+      padding: 10px 11px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      outline: none;
+    }
+    textarea { min-height: 40px; resize: vertical; }
+    input::placeholder, textarea::placeholder { color: rgba(233,238,255,.40); }
+    button {
+      cursor: pointer;
+      background: rgba(159,176,255,.16);
+      border: 1px solid rgba(159,176,255,.35);
+      font-weight: 600;
+    }
+    button:hover { filter: brightness(1.1); }
+    .btnDanger { background: rgba(255,91,110,.18); border-color: rgba(255,91,110,.45); }
+    .btnOk { background: rgba(61,220,151,.16); border-color: rgba(61,220,151,.40); }
+
+    .kpis { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); }
+    .kpi {
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+    }
+    .kpi .t { font-size: 12px; color: rgba(233,238,255,.70); }
+    .kpi .v { font-size: 18px; margin-top: 6px; font-weight: 700; }
+    .pos { color: var(--ok); }
+    .neg { color: var(--danger); }
+
+    .table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 12px; }
+    .table th, .table td { padding: 10px 10px; border-bottom: 1px solid rgba(255,255,255,.08); font-size: 13px; }
+    .table th { text-align: left; color: rgba(233,238,255,.75); font-weight: 650; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 8px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.20);
+      font-size: 12px;
+    }
+    .pill.in { border-color: rgba(61,220,151,.45); }
+    .pill.out { border-color: rgba(255,91,110,.45); }
+    .muted { color: rgba(233,238,255,.65); font-size: 12px; }
+    .warn { color: #ffd36a; }
+    .small { font-size: 12px; }
+    .right { text-align: right; }
+    .controls { display:flex; gap:10px; flex-wrap: wrap; align-items: end; }
+    .controls > * { flex: 1; min-width: 150px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .footerActions { display:flex; gap:10px; flex-wrap: wrap; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Budget App (local)</h1>
+  </header>
+
+  <main class="grid">
+    <!-- LEFT: Forms -->
+    <section class="card">
+      <h2 style="margin:0 0 10px 0;font-size:15px;">Nieuwe transactie</h2>
+
+      <div class="row">
+        <div>
+          <label>Type</label>
+          <select id="type">
+            <option value="expense">Uitgave</option>
+            <option value="income">Inkomst</option>
+          </select>
+        </div>
+        <div>
+          <label>Bedrag (€)</label>
+          <input id="amount" type="number" step="0.01" placeholder="bijv. 24.95" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label>Categorie</label>
+          <select id="category"></select>
+        </div>
+        <div>
+          <label>Datum</label>
+          <input id="date" type="date" />
+        </div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label>Notitie (optioneel)</label>
+        <textarea id="note" placeholder="bijv. boodschappen Albert Heijn"></textarea>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <button class="btnOk" id="addBtn">Toevoegen</button>
+        <button class="btnDanger" id="clearBtn" title="Verwijdert alle data uit deze browser">Alles wissen</button>
+      </div>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,.10);margin:14px 0;" />
+
+      <h2 style="margin:0 0 10px 0;font-size:15px;">Budget per categorie</h2>
+      <div class="row">
+        <div>
+          <label>Categorie</label>
+          <select id="budgetCategory"></select>
+        </div>
+        <div>
+          <label>Maandbudget (€)</label>
+          <input id="budgetAmount" type="number" step="0.01" placeholder="bijv. 300" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <button id="setBudgetBtn">Budget instellen</button>
+        <button class="btnDanger" id="resetBudgetsBtn">Budgets resetten</button>
+      </div>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,.10);margin:14px 0;" />
+
+      <h2 style="margin:0 0 10px 0;font-size:15px;">Backup</h2>
+      <div class="footerActions">
+        <button id="exportBtn">Export JSON</button>
+        <button id="importBtn">Import JSON</button>
+      </div>
+      <p class="muted">Tip: export maakt een download. Import vraagt om een JSON-bestand.</p>
+
+      <input id="importFile" type="file" accept="application/json" style="display:none;" />
+    </section>
+
+    <!-- RIGHT: Dashboard -->
+    <section class="card">
+      <div class="controls">
+        <div>
+          <label>Maand</label>
+          <input id="month" type="month" />
+        </div>
+        <div>
+          <label>Filter categorie</label>
+          <select id="filterCategory">
+            <option value="all">Alle categorieën</option>
+          </select>
+        </div>
+        <div>
+          <label>Sorteren</label>
+          <select id="sort">
+            <option value="date_desc">Datum (nieuwste)</option>
+            <option value="date_asc">Datum (oudste)</option>
+            <option value="amount_desc">Bedrag (hoog-laag)</option>
+            <option value="amount_asc">Bedrag (laag-hoog)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;" class="kpis">
+        <div class="kpi">
+          <div class="t">Inkomsten</div>
+          <div id="kpiIncome" class="v pos">€ 0,00</div>
+        </div>
+        <div class="kpi">
+          <div class="t">Uitgaven</div>
+          <div id="kpiExpense" class="v neg">€ 0,00</div>
+        </div>
+        <div class="kpi">
+          <div class="t">Saldo</div>
+          <div id="kpiNet" class="v">€ 0,00</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <h2 style="margin:0 0 8px 0;font-size:15px;">Budget status (maand)</h2>
+        <div id="budgetStatus" class="small muted">Nog geen budgets ingesteld.</div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <h2 style="margin:0 0 8px 0;font-size:15px;">Transacties</h2>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Type</th>
+              <th>Categorie</th>
+              <th>Notitie</th>
+              <th class="right">Bedrag</th>
+              <th class="right">Actie</th>
+            </tr>
+          </thead>
+          <tbody id="txBody"></tbody>
+        </table>
+        <p id="emptyState" class="muted" style="margin:10px 0 0 0; display:none;">Geen transacties in deze maand/filter.</p>
+      </div>
+    </section>
+  </main>
+
+<script>
+(() => {
+  // --- Config
+  const CATEGORIES = [
+    "Boodschappen", "Wonen", "Vervoer", "Abonnementen", "Uit eten",
+    "Zorg", "Leisure", "Kleding", "Sparen/Beleggen", "Overig"
+  ];
+
+  const STORAGE_KEY = "budget_app_v1";
+  const BUDGETS_KEY  = "budget_app_budgets_v1";
+
+  // --- Helpers
+  const eur = (n) => new Intl.NumberFormat("nl-NL", { style:"currency", currency:"EUR" }).format(n || 0);
+  const isoToday = () => {
+    const d = new Date();
+    const pad = (x) => String(x).padStart(2,"0");
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  };
+  const currentMonth = () => {
+    const d = new Date();
+    const pad = (x) => String(x).padStart(2,"0");
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+  };
+  const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
+
+  const load = (key, fallback) => {
+    try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+    catch { return fallback; }
+  };
+  const save = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+
+  // --- State
+  let txs = load(STORAGE_KEY, []);
+  let budgets = load(BUDGETS_KEY, {}); // { "Boodschappen": 300, ... }
+
+  // --- DOM
+  const el = (id) => document.getElementById(id);
+
+  const typeEl = el("type");
+  const amountEl = el("amount");
+  const categoryEl = el("category");
+  const dateEl = el("date");
+  const noteEl = el("note");
+  const addBtn = el("addBtn");
+  const clearBtn = el("clearBtn");
+
+  const monthEl = el("month");
+  const filterCategoryEl = el("filterCategory");
+  const sortEl = el("sort");
+
+  const kpiIncome = el("kpiIncome");
+  const kpiExpense = el("kpiExpense");
+  const kpiNet = el("kpiNet");
+
+  const txBody = el("txBody");
+  const emptyState = el("emptyState");
+
+  const budgetCategoryEl = el("budgetCategory");
+  const budgetAmountEl = el("budgetAmount");
+  const setBudgetBtn = el("setBudgetBtn");
+  const resetBudgetsBtn = el("resetBudgetsBtn");
+  const budgetStatusEl = el("budgetStatus");
+
+  const exportBtn = el("exportBtn");
+  const importBtn = el("importBtn");
+  const importFile = el("importFile");
+
+  // --- Init selects
+  function fillCategorySelect(select, includeAll=false) {
+    select.innerHTML = "";
+    if (includeAll) {
+      const opt = document.createElement("option");
+      opt.value = "all";
+      opt.textContent = "Alle categorieën";
+      select.appendChild(opt);
+    }
+    for (const c of CATEGORIES) {
+      const opt = document.createElement("option");
+      opt.value = c;
+      opt.textContent = c;
+      select.appendChild(opt);
+    }
+  }
+
+  fillCategorySelect(categoryEl);
+  fillCategorySelect(budgetCategoryEl);
+  fillCategorySelect(filterCategoryEl, true);
+
+  // Defaults
+  dateEl.value = isoToday();
+  monthEl.value = currentMonth();
+
+  // --- Core logic
+  function getMonthRange(monthStr) {
+    // monthStr: "YYYY-MM"
+    const [y, m] = monthStr.split("-").map(Number);
+    const start = new Date(y, m-1, 1);
+    const end = new Date(y, m, 1); // next month
+    return { start, end };
+  }
+
+  function parseDate(d) {
+    // d: "YYYY-MM-DD"
+    const [y,m,day] = d.split("-").map(Number);
+    return new Date(y, m-1, day);
+  }
+
+  function filteredTxs() {
+    const { start, end } = getMonthRange(monthEl.value);
+    const cat = filterCategoryEl.value;
+
+    let list = txs.filter(t => {
+      const dt = parseDate(t.date);
+      const inMonth = dt >= start && dt < end;
+      const catOk = (cat === "all") ? true : (t.category === cat);
+      return inMonth && catOk;
+    });
+
+    const sort = sortEl.value;
+    const byDate = (a,b) => parseDate(a.date) - parseDate(b.date);
+    const byAmount = (a,b) => (a.amount - b.amount);
+
+    if (sort === "date_desc") list.sort((a,b)=> byDate(b,a));
+    if (sort === "date_asc")  list.sort(byDate);
+    if (sort === "amount_desc") list.sort((a,b)=> byAmount(b,a));
+    if (sort === "amount_asc")  list.sort(byAmount);
+
+    return list;
+  }
+
+  function computeKPIs(list) {
+    let income = 0, expense = 0;
+    for (const t of list) {
+      if (t.type === "income") income += t.amount;
+      else expense += t.amount;
+    }
+    return { income, expense, net: income - expense };
+  }
+
+  function computeCategorySpendingForMonth(monthStr) {
+    const { start, end } = getMonthRange(monthStr);
+    const totals = {}; // expenses only
+    for (const c of CATEGORIES) totals[c] = 0;
+
+    for (const t of txs) {
+      const dt = parseDate(t.date);
+      if (dt >= start && dt < end && t.type === "expense") {
+        totals[t.category] = (totals[t.category] || 0) + t.amount;
+      }
+    }
+    return totals;
+  }
+
+  function renderBudgetStatus() {
+    const spending = computeCategorySpendingForMonth(monthEl.value);
+    const activeBudgets = Object.entries(budgets)
+      .filter(([cat, val]) => typeof val === "number" && isFinite(val) && val > 0);
+
+    if (activeBudgets.length === 0) {
+      budgetStatusEl.textContent = "Nog geen budgets ingesteld.";
+      return;
+    }
+
+    const lines = activeBudgets.map(([cat, limit]) => {
+      const spent = spending[cat] || 0;
+      const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+      const over = spent - limit;
+
+      if (over > 0.01) {
+        return `• ${cat}: ${eur(spent)} / ${eur(limit)}  —  ${pct}%  (${eur(over)} over budget)`;
+      }
+      return `• ${cat}: ${eur(spent)} / ${eur(limit)}  —  ${pct}%`;
+    });
+
+    // Simple warning highlight if any over budget
+    const anyOver = activeBudgets.some(([cat, limit]) => (spending[cat]||0) - limit > 0.01);
+    budgetStatusEl.innerHTML = `<div class="${anyOver ? "warn" : ""}">${lines.join("<br>")}</div>`;
+  }
+
+  function render() {
+    const list = filteredTxs();
+    const { income, expense, net } = computeKPIs(list);
+
+    kpiIncome.textContent = eur(income);
+    kpiExpense.textContent = eur(expense);
+    kpiNet.textContent = eur(net);
+    kpiNet.className = "v " + (net >= 0 ? "pos" : "neg");
+
+    txBody.innerHTML = "";
+    emptyState.style.display = list.length ? "none" : "block";
+
+    for (const t of list) {
+      const tr = document.createElement("tr");
+
+      const typePill = t.type === "income"
+        ? `<span class="pill in">Inkomst</span>`
+        : `<span class="pill out">Uitgave</span>`;
+
+      tr.innerHTML = `
+        <td class="mono">${t.date}</td>
+        <td>${typePill}</td>
+        <td>${t.category}</td>
+        <td class="muted">${(t.note || "").replaceAll("<","&lt;")}</td>
+        <td class="right ${t.type==="income" ? "pos":"neg"}">${eur(t.amount)}</td>
+        <td class="right">
+          <button class="btnDanger small" data-del="${t.id}">Verwijder</button>
+        </td>
+      `;
+      txBody.appendChild(tr);
+    }
+
+    // attach delete handlers
+    txBody.querySelectorAll("button[data-del]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-del");
+        txs = txs.filter(t => t.id !== id);
+        save(STORAGE_KEY, txs);
+        renderBudgetStatus();
+        render();
+      });
+    });
+
+    renderBudgetStatus();
+  }
+
+  function addTransaction() {
+    const type = typeEl.value;
+    const amount = Number(amountEl.value);
+    const category = categoryEl.value;
+    const date = dateEl.value;
+    const note = noteEl.value.trim();
+
+    if (!date) { alert("Kies een datum."); return; }
+    if (!category) { alert("Kies een categorie."); return; }
+    if (!isFinite(amount) || amount <= 0) { alert("Vul een geldig bedrag in (> 0)."); return; }
+
+    const tx = { id: uid(), type, amount: Math.round(amount * 100) / 100, category, date, note };
+    txs.push(tx);
+    save(STORAGE_KEY, txs);
+
+    // small UX reset
+    amountEl.value = "";
+    noteEl.value = "";
+    // keep date same
+    renderBudgetStatus();
+    render();
+  }
+
+  function clearAll() {
+    const ok = confirm("Weet je zeker dat je ALLE transacties én budgets wilt verwijderen in deze browser?");
+    if (!ok) return;
+    txs = [];
+    budgets = {};
+    save(STORAGE_KEY, txs);
+    save(BUDGETS_KEY, budgets);
+    render();
+  }
+
+  function setBudget() {
+    const cat = budgetCategoryEl.value;
+    const val = Number(budgetAmountEl.value);
+
+    if (!cat) { alert("Kies een categorie."); return; }
+    if (!isFinite(val) || val <= 0) { alert("Vul een geldig budget in (> 0)."); return; }
+
+    budgets[cat] = Math.round(val * 100) / 100;
+    save(BUDGETS_KEY, budgets);
+    budgetAmountEl.value = "";
+    renderBudgetStatus();
+  }
+
+  function resetBudgets() {
+    const ok = confirm("Budgets resetten?");
+    if (!ok) return;
+    budgets = {};
+    save(BUDGETS_KEY, budgets);
+    renderBudgetStatus();
+  }
+
+  function exportJSON() {
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      txs,
+      budgets
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `budget-backup-${currentMonth()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importJSON(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data || typeof data !== "object") throw new Error("Invalid JSON");
+        if (!Array.isArray(data.txs)) throw new Error("Geen 'txs' array gevonden.");
+        txs = data.txs.map(t => ({
+          id: String(t.id || uid()),
+          type: (t.type === "income" ? "income" : "expense"),
+          amount: Math.round(Number(t.amount || 0) * 100) / 100,
+          category: CATEGORIES.includes(t.category) ? t.category : "Overig",
+          date: (typeof t.date === "string" ? t.date : isoToday()),
+          note: String(t.note || "")
+        })).filter(t => isFinite(t.amount) && t.amount > 0);
+
+        budgets = (data.budgets && typeof data.budgets === "object") ? data.budgets : {};
+        // sanitize budgets
+        const clean = {};
+        for (const [k,v] of Object.entries(budgets)) {
+          if (CATEGORIES.includes(k) && isFinite(Number(v)) && Number(v) > 0) clean[k] = Math.round(Number(v)*100)/100;
+        }
+        budgets = clean;
+
+        save(STORAGE_KEY, txs);
+        save(BUDGETS_KEY, budgets);
+        render();
+        alert("Import gelukt.");
+      } catch (e) {
+        alert("Import mislukt: " + e.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // --- Events
+  addBtn.addEventListener("click", addTransaction);
+  clearBtn.addEventListener("click", clearAll);
+
+  setBudgetBtn.addEventListener("click", setBudget);
+  resetBudgetsBtn.addEventListener("click", resetBudgets);
+
+  monthEl.addEventListener("change", render);
+  filterCategoryEl.addEventListener("change", render);
+  sortEl.addEventListener("change", render);
+
+  exportBtn.addEventListener("click", exportJSON);
+  importBtn.addEventListener("click", () => importFile.click());
+  importFile.addEventListener("change", () => {
+    const f = importFile.files?.[0];
+    if (f) importJSON(f);
+    importFile.value = "";
+  });
+
+  // Enter = toevoegen (als focus in amount/note)
+  amountEl.addEventListener("keydown", (e) => { if (e.key === "Enter") addTransaction(); });
+  noteEl.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) addTransaction(); });
+
+  // First render
+  render();
+})();
+</script>
+</body>
+</html>
