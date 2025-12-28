@@ -233,8 +233,34 @@
 (() => {
   // --- Config
   const CATEGORIES = [
-    "Boodschappen", "Wonen", "Vervoer", "Abonnementen", "Uit eten",
-    "Zorg", "Leisure", "Kleding", "Sparen/Beleggen", "Overig"
+    const EXPENSE_CATEGORIES = [
+  "Boodschappen",
+  "Wonen",
+  "Vervoer",
+  "Abonnementen",
+  "Uit eten",
+  "Zorg",
+  "Leisure",
+  "Kleding",
+  "Sparen/Beleggen",
+  "Overig"
+];
+
+const INCOME_CATEGORIES = [
+  "Salaris",
+  "Freelance/ZZP",
+  "Bonus/13e maand",
+  "Vakantiegeld",
+  "Toeslagen (huur/zorg/kind)",
+  "Kinderbijslag",
+  "Belastingteruggave",
+  "Dividend/Rente",
+  "Verkoop (Marktplaats etc.)",
+  "Terugbetaling/Refund",
+  "Cadeau/Gift",
+  "Overig"
+];
+  
   ];
 
   const STORAGE_KEY = "budget_app_v1";
@@ -297,25 +323,25 @@
   const importFile = el("importFile");
 
   // --- Init selects
-  function fillCategorySelect(select, includeAll=false) {
-    select.innerHTML = "";
-    if (includeAll) {
-      const opt = document.createElement("option");
-      opt.value = "all";
-      opt.textContent = "Alle categorieën";
-      select.appendChild(opt);
-    }
-    for (const c of CATEGORIES) {
-      const opt = document.createElement("option");
-      opt.value = c;
-      opt.textContent = c;
-      select.appendChild(opt);
-    }
+function fillCategorySelect(select, categories, includeAll=false) {
+  select.innerHTML = "";
+  if (includeAll) {
+    const opt = document.createElement("option");
+    opt.value = "all";
+    opt.textContent = "Alle categorieën";
+    select.appendChild(opt);
   }
+  for (const c of categories) {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    select.appendChild(opt);
+  }
+}
 
-  fillCategorySelect(categoryEl);
-  fillCategorySelect(budgetCategoryEl);
-  fillCategorySelect(filterCategoryEl, true);
+fillCategorySelect(categoryEl, EXPENSE_CATEGORIES);
+fillCategorySelect(budgetCategoryEl, EXPENSE_CATEGORIES);
+fillCategorySelect(filterCategoryEl, [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES], true);
 
   // Defaults
   dateEl.value = isoToday();
@@ -560,6 +586,22 @@
   }
 
   // --- Events
+  function updateCategoryOptionsByType() {
+  if (typeEl.value === "income") {
+    fillCategorySelect(categoryEl, INCOME_CATEGORIES);
+  } else {
+    fillCategorySelect(categoryEl, EXPENSE_CATEGORIES);
+  }
+}
+
+// meteen goed zetten bij load
+updateCategoryOptionsByType();
+
+// en updaten bij wisselen
+typeEl.addEventListener("change", () => {
+  updateCategoryOptionsByType();
+});
+
   addBtn.addEventListener("click", addTransaction);
   clearBtn.addEventListener("click", clearAll);
 
@@ -588,3 +630,4 @@
 </script>
 </body>
 </html>
+
